@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "api-tutorials"
+version = "0.1.0"
+description = "Example scripts and tutorials on how to use the ai|coustics API with Python"
+authors = ["baby-platom <platon.programmer@gmail.com>"]
+license = "MIT License"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
