@@ -5,7 +5,11 @@ from typing import Any
 import aiofiles
 import aiohttp
 
-API_URL = "https://api.ai-coustics.com/v1"
+from src.configs import get_configs
+
+configs = get_configs()
+
+API_URL = "http://localhost:8000/v1"
 API_KEY = "your_api_key"
 
 
@@ -26,7 +30,9 @@ async def upload_and_enhance(
             filename=file_path.name,
         )
 
-        async with aiohttp.ClientSession(headers={"X-API-Key": API_KEY}) as session:
+        async with aiohttp.ClientSession(
+            headers={"X-API-Key": configs.api_key}
+        ) as session:
             async with session.post(url, data=form_data) as response:
                 response.raise_for_status()
 
