@@ -9,8 +9,7 @@ from src.configs import get_configs
 
 configs = get_configs()
 
-API_URL = "http://localhost:8000/v1"
-API_KEY = "your_api_key"
+API_URL = "https://api.ai-coustics.com/v1"
 
 
 async def upload_and_enhance(
@@ -34,10 +33,15 @@ async def upload_and_enhance(
             headers={"X-API-Key": configs.api_key}
         ) as session:
             async with session.post(url, data=form_data) as response:
-                response.raise_for_status()
+                if response.status != 201:
+                    response_text = await response.text()
+                    print(f"Error occured: {response_text}")
+                    return
 
                 response_json = await response.json()
-                return response_json["generated_name"]
+                generated_name = response_json["generated_name"]
+                print(f"Uploaded file's generated name: {generated_name}")
+                return generated_name
 
 
 def main() -> None:
@@ -50,14 +54,13 @@ def main() -> None:
         "transcode_kind": "MP3",
     }
 
-    generated_name = asyncio.run(
+    asyncio.run(
         upload_and_enhance(
             url,
             file_path,
             arguments,
         )
     )
-    print(f"Uploaded file's generated name: {generated_name}")
 
 
 if __name__ == "__main__":
