@@ -2,6 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
+import aiofiles
 import aiohttp
 
 API_URL = "https://api.ai-coustics.com/v1"
@@ -17,7 +18,7 @@ async def upload_and_enhance(
     for field_name, field_value in arguments.items():
         form_data.add_field(field_name, str(field_value))
 
-    with open(file_path, "rb") as file:
+    async with aiofiles.open(file_path, "rb") as file:
         form_data.add_field(
             "file",
             file,
@@ -27,6 +28,8 @@ async def upload_and_enhance(
 
         async with aiohttp.ClientSession(headers={"X-API-Key": API_KEY}) as session:
             async with session.post(url, data=form_data) as response:
+                response.raise_for_status()
+
                 response_json = await response.json()
                 return response_json["generated_name"]
 
