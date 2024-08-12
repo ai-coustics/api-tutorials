@@ -15,6 +15,17 @@ files = [
 pycares = ">=4.0.0"
 
 [[package]]
+name = "aiofiles"
+version = "24.1.0"
+description = "File support for asyncio."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "aiofiles-24.1.0-py3-none-any.whl", hash = "sha256:b4ec55f4195e3eb5d7abd1bf7e061763e864dd4954231fb8539a0ef8bb8260e5"},
+    {file = "aiofiles-24.1.0.tar.gz", hash = "sha256:22a075c9e5a3810f0c2e48f3008c94d68c65d763b9b03857924c99e57355166c"},
+]
+
+[[package]]
 name = "aiohappyeyeballs"
 version = "2.3.5"
 description = "Happy Eyeballs for asyncio"
@@ -746,4 +757,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "8575a87b6dfc4c53b25448136ec16a3c8713c87925773d7dc864ca1c920c7e4e"
+content-hash = "78e5655daaeaf533c658b6c70abd5535ab522ff5bc24e7d842bc2b2b2d0ec5c1"
