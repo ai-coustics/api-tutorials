@@ -1,12 +1,14 @@
 import asyncio
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 
+@asynccontextmanager
 async def mock_get_media_queue(
     source_folder: Path = Path("samples"),
     n_tasks: int | None = None,
-    period: float = 5,
+    period: float = 5.0,
 ) -> AsyncGenerator[asyncio.Queue[Path]]:
     queue = asyncio.Queue()
 
@@ -16,6 +18,8 @@ async def mock_get_media_queue(
             await asyncio.sleep(period)
 
     files = [file_path for file_path in source_folder.rglob("*") if file_path.is_file()]
+    if n_tasks is None:
+        n_tasks = len(files)
     if len(files) < n_tasks:
         raise ValueError(
             f"Requested n_tasks '{n_tasks}' is bigger than"

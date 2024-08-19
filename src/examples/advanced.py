@@ -189,19 +189,17 @@ async def main() -> None:
     enhancement_params = EnhancementParamsTO(transcode_kind="WAV")
     output_folder = Path("results")
 
-    agen = mock_get_media_queue()
-    incoming_media_queue = await anext(agen)
-    client = MediaEnhancementClient(
-        incoming_media_queue=incoming_media_queue,
-        enhancement_params=enhancement_params,
-        result_media_file_extension="wav",
-        output_folder=output_folder,
-        tasks_limit=100,
-        http_connections_limit=100,
-        http_request_timeout=60.0,
-    )
-
-    await client.run()
+    async with mock_get_media_queue() as incoming_media_queue:
+        client = MediaEnhancementClient(
+            incoming_media_queue=incoming_media_queue,
+            enhancement_params=enhancement_params,
+            result_media_file_extension="wav",
+            output_folder=output_folder,
+            tasks_limit=100,
+            http_connections_limit=100,
+            http_request_timeout=60.0,
+        )
+        await client.run()
 
 
 if __name__ == "__main__":
