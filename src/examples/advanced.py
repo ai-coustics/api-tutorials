@@ -9,7 +9,8 @@ import aiohttp
 from aiofiles import os as aiofiles_os
 from fastapi import FastAPI, Header, HTTPException, status
 from pydantic import BaseModel
-from uvicorn import Config, Server
+from uvicorn import Config as UvicornConfig
+from uvicorn import Server
 
 from src.configs import Configs, get_configs
 from src.mocks import mock_get_media_queue
@@ -37,17 +38,27 @@ class MediaEnhancementClient:
         enhancement_params: EnhancementParamsTO,
         result_media_file_extension: str,
         output_folder: Path,
-        tasks_limit: int,
-        http_connections_limit: int,
-        http_request_timeout: int,
+        webhook_server_host: str,
+        webhook_server_port: int,
+        upload_tasks_n: int = 50,
+        download_tasks_n: int = 50,
+        http_connections_limit: int = 100,
+        http_request_timeout: int = 300.0,
         shutdown_timeout: float = 60.0,
     ) -> None:
         self.incoming_media_queue = incoming_media_queue
         self.enhanced_media_queue: asyncio.Queue[str] = asyncio.Queue()
+        self.result_media_queue: asyncio.Queue[Path] = asyncio.Queue()
 
         self.enhancement_params = enhancement_params
         self.result_media_file_extension = result_media_file_extension
         self.output_folder = output_folder
+
+        self.webhook_server_host = webhook_server_host
+        self.webhook_server_port = webhook_server_port
+
+        self.upload_tasks_n = upload_tasks_n
+        self.download_tasks_n = download_tasks_n
 
         self.http_connections_limit = http_connections_limit
         self.http_request_timeout = http_request_timeout
@@ -55,9 +66,6 @@ class MediaEnhancementClient:
 
         self._configs: Configs = get_configs()
         self._http_session: aiohttp.ClientSession
-
-        self._background_tasks: set[asyncio.Task] = set()
-        self._tasks_semaphore = asyncio.Semaphore(tasks_limit)
 
     @asynccontextmanager
     async def _open_http_session(self: Self) -> AsyncGenerator[None]:
@@ -73,7 +81,7 @@ class MediaEnhancementClient:
             self._http_session = _http_session
             yield
 
-    async def upload(self: Self, file_path: Path) -> str:
+    async def upload(self: Self, file_path: Path) -> str | None:
         url = f"{API_URL}/media/enhance"
 
         form_data = aiohttp.FormData()
@@ -101,7 +109,7 @@ class MediaEnhancementClient:
         self: Self,
         generated_name: str,
         file_extension: str,
-    ) -> Path:
+    ) -> Path | None:
         url = f"{API_URL}/media/{generated_name}"
         file_name = f"{generated_name}.{file_extension}"
         output_file_path = self.output_folder / file_name
@@ -138,36 +146,44 @@ class MediaEnhancementClient:
 
             await self.enhanced_media_queue.put(data.generated_name)
 
-        config = Config(app, host="localhost", port=8002)
+        config = UvicornConfig(
+            app,
+            host=self.webhook_server_host,
+            port=self.webhook_server_port,
+        )
         server = Server(config)
         await server.serve()
 
     async def _process_incoming(self: Self) -> None:
-        async def _process(file_path: Path) -> None:
-            async with self._tasks_semaphore:
+        async def _process() -> None:
+            while True:
+                file_path = await self.incoming_media_queue.get()
                 await self.upload(file_path)
 
-        while True:
-            file_path = await self.incoming_media_queue.get()
-            task = asyncio.create_task(_process(file_path))
-            self._background_tasks.add(task)
-            task.add_done_callback(self._background_tasks.discard)
+        tasks: list[asyncio.Task] = []
+        for _ in self.upload_tasks_n:
+            task = asyncio.create_task(_process())
+            tasks.append(task)
+        await asyncio.gather(*tasks)
 
     async def _process_enhanced(self: Self) -> None:
         async def _process(generated_name: str) -> None:
-            async with self._tasks_semaphore:
-                await self.download(
-                    generated_name,
-                    self.result_media_file_extension,
-                )
-
-        while True:
             generated_name = await self.enhanced_media_queue.get()
-            task = asyncio.create_task(_process(generated_name))
-            self._background_tasks.add(task)
-            task.add_done_callback(self._background_tasks.discard)
+            file_path = await self.download(
+                generated_name,
+                self.result_media_file_extension,
+            )
+            if file_path is not None:
+                await self.result_media_queue.put(file_path)
 
-    async def run(self: Self) -> None:
+        tasks: list[asyncio.Task] = []
+        for _ in self.download_tasks_n:
+            task = asyncio.create_task(_process())
+            tasks.append(task)
+        await asyncio.gather(*tasks)
+
+    @asynccontextmanager
+    async def run(self: Self) -> AsyncGenerator[asyncio.Queue[Path]]:
         tasks: list[asyncio.Task] = []
 
         try:
@@ -177,15 +193,14 @@ class MediaEnhancementClient:
                     asyncio.create_task(self._process_enhanced()),
                     asyncio.create_task(self._process_callbacks()),
                 )
-                await asyncio.gather(*tasks)
+                yield self.result_media_queue
         except asyncio.CancelledError:
+            pass
+        finally:
             for task in tasks:
                 task.cancel()
-            for background_task in self._background_tasks:
-                background_task.cancel()
-
             await asyncio.wait_for(
-                asyncio.gather(*tasks, *self._background_tasks),
+                asyncio.gather(*tasks, return_exceptions=True),
                 self.shutdown_timeout,
             )
 
@@ -205,7 +220,8 @@ async def main() -> None:
             http_connections_limit=100,
             http_request_timeout=60.0,
         )
-        await client.run()
+        async with client.run() as processed_media_queue:
+            pass
 
 
 if __name__ == "__main__":
