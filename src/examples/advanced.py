@@ -40,16 +40,18 @@ class MediaEnhancementClient:
         tasks_limit: int,
         http_connections_limit: int,
         http_request_timeout: int,
+        shutdown_timeout: float = 60.0,
     ) -> None:
+        self.incoming_media_queue = incoming_media_queue
+        self.enhanced_media_queue: asyncio.Queue[str] = asyncio.Queue()
+
         self.enhancement_params = enhancement_params
         self.result_media_file_extension = result_media_file_extension
         self.output_folder = output_folder
 
         self.http_connections_limit = http_connections_limit
         self.http_request_timeout = http_request_timeout
-
-        self.incoming_media_queue = incoming_media_queue
-        self.enhanced_media_queue: asyncio.Queue[str] = asyncio.Queue()
+        self.shutdown_timeout = shutdown_timeout
 
         self._configs: Configs = get_configs()
         self._http_session: aiohttp.ClientSession
@@ -166,7 +168,7 @@ class MediaEnhancementClient:
             task.add_done_callback(self._background_tasks.discard)
 
     async def run(self: Self) -> None:
-        tasks = []
+        tasks: list[asyncio.Task] = []
 
         try:
             async with self._open_http_session():
@@ -182,18 +184,22 @@ class MediaEnhancementClient:
             for background_task in self._background_tasks:
                 background_task.cancel()
 
-            await asyncio.wait_for(asyncio.gather(*tasks, *self._background_tasks), 30)
+            await asyncio.wait_for(
+                asyncio.gather(*tasks, *self._background_tasks),
+                self.shutdown_timeout,
+            )
 
 
 async def main() -> None:
-    enhancement_params = EnhancementParamsTO(transcode_kind="WAV")
+    transcode_kind, result_media_file_extension = "WAV", "wav"
+    enhancement_params = EnhancementParamsTO(transcode_kind=transcode_kind)
     output_folder = Path("results")
 
     async with mock_get_media_queue() as incoming_media_queue:
         client = MediaEnhancementClient(
             incoming_media_queue=incoming_media_queue,
             enhancement_params=enhancement_params,
-            result_media_file_extension="wav",
+            result_media_file_extension=result_media_file_extension,
             output_folder=output_folder,
             tasks_limit=100,
             http_connections_limit=100,
