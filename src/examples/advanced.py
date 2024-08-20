@@ -13,7 +13,7 @@ from uvicorn import Config as UvicornConfig
 from uvicorn import Server
 
 from src.configs import Configs, get_configs
-from src.mocks import mock_get_media_queue
+from src.mocks import mock_get_media_queue, mock_process_enhanced_media
 
 # API_URL = "https://api.ai-coustics.com/v1"
 API_URL = "http://localhost:8000/v1"
@@ -43,7 +43,7 @@ class MediaEnhancementClient:
         upload_tasks_n: int = 50,
         download_tasks_n: int = 50,
         http_connections_limit: int = 100,
-        http_request_timeout: int = 300.0,
+        http_request_timeout: int = 30.0,
         shutdown_timeout: float = 60.0,
     ) -> None:
         self.incoming_media_queue = incoming_media_queue
@@ -66,6 +66,13 @@ class MediaEnhancementClient:
 
         self._configs: Configs = get_configs()
         self._http_session: aiohttp.ClientSession
+
+    @staticmethod
+    def task_done_callback(task: asyncio.Task) -> None:
+        try:
+            task.result()
+        except Exception as e:
+            print(f"Task raised an exception: {e}")
 
     @asynccontextmanager
     async def _open_http_session(self: Self) -> AsyncGenerator[None]:
@@ -129,6 +136,12 @@ class MediaEnhancementClient:
 
     async def _process_callbacks(self: Self) -> None:
         app = FastAPI()
+        config = UvicornConfig(
+            app,
+            host=self.webhook_server_host,
+            port=self.webhook_server_port,
+        )
+        server = Server(config)
 
         @app.post("/callbacks")
         async def handle_callbacks(
@@ -146,12 +159,6 @@ class MediaEnhancementClient:
 
             await self.enhanced_media_queue.put(data.generated_name)
 
-        config = UvicornConfig(
-            app,
-            host=self.webhook_server_host,
-            port=self.webhook_server_port,
-        )
-        server = Server(config)
         await server.serve()
 
     async def _process_incoming(self: Self) -> None:
@@ -161,13 +168,14 @@ class MediaEnhancementClient:
                 await self.upload(file_path)
 
         tasks: list[asyncio.Task] = []
-        for _ in self.upload_tasks_n:
+        for _ in range(self.upload_tasks_n):
             task = asyncio.create_task(_process())
             tasks.append(task)
+            task.add_done_callback(self.task_done_callback)
         await asyncio.gather(*tasks)
 
     async def _process_enhanced(self: Self) -> None:
-        async def _process(generated_name: str) -> None:
+        async def _process() -> None:
             generated_name = await self.enhanced_media_queue.get()
             file_path = await self.download(
                 generated_name,
@@ -177,32 +185,35 @@ class MediaEnhancementClient:
                 await self.result_media_queue.put(file_path)
 
         tasks: list[asyncio.Task] = []
-        for _ in self.download_tasks_n:
+        for _ in range(self.download_tasks_n):
             task = asyncio.create_task(_process())
             tasks.append(task)
+            task.add_done_callback(self.task_done_callback)
         await asyncio.gather(*tasks)
 
     @asynccontextmanager
     async def run(self: Self) -> AsyncGenerator[asyncio.Queue[Path]]:
         tasks: list[asyncio.Task] = []
 
-        try:
-            async with self._open_http_session():
+        async with self._open_http_session():
+            try:
                 tasks = (
                     asyncio.create_task(self._process_incoming()),
                     asyncio.create_task(self._process_enhanced()),
                     asyncio.create_task(self._process_callbacks()),
                 )
+                for task in tasks:
+                    task.add_done_callback(self.task_done_callback)
                 yield self.result_media_queue
-        except asyncio.CancelledError:
-            pass
-        finally:
-            for task in tasks:
-                task.cancel()
-            await asyncio.wait_for(
-                asyncio.gather(*tasks, return_exceptions=True),
-                self.shutdown_timeout,
-            )
+            except asyncio.CancelledError:
+                pass
+            finally:
+                for task in tasks:
+                    task.cancel()
+                await asyncio.wait_for(
+                    asyncio.gather(*tasks, return_exceptions=True),
+                    self.shutdown_timeout,
+                )
 
 
 async def main() -> None:
@@ -216,12 +227,11 @@ async def main() -> None:
             enhancement_params=enhancement_params,
             result_media_file_extension=result_media_file_extension,
             output_folder=output_folder,
-            tasks_limit=100,
-            http_connections_limit=100,
-            http_request_timeout=60.0,
+            webhook_server_host="localhost",
+            webhook_server_port=8002,
         )
-        async with client.run() as processed_media_queue:
-            pass
+        async with client.run() as enhanced_media_queue:
+            await mock_process_enhanced_media(enhanced_media_queue)
 
 
 if __name__ == "__main__":
@@ -235,4 +245,5 @@ if __name__ == "__main__":
         main_task.cancel()
         loop.run_until_complete(main_task)
     finally:
+        loop.run_until_complete(loop.shutdown_asyncgens())
         loop.close()

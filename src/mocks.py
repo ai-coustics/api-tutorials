@@ -37,3 +37,9 @@ async def mock_get_media_queue(
     for task in tasks:
         task.cancel()
     await asyncio.gather(*tasks)
+
+
+async def mock_process_enhanced_media(queue: asyncio.Queue[Path]) -> None:
+    while True:
+        enhanced_file_path = await queue.get()
+        print(f"Enhanced media file path: {enhanced_file_path}")
