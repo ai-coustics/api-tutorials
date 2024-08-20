@@ -15,8 +15,7 @@ from uvicorn import Server
 from src.configs import Configs, get_configs
 from src.mocks import mock_get_media_queue, mock_process_enhanced_media
 
-# API_URL = "https://api.ai-coustics.com/v1"
-API_URL = "http://localhost:8000/v1"
+API_URL = "https://api.ai-coustics.com/v1"
 CHUNK_SIZE = 2048
 
 
