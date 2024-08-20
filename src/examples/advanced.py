@@ -66,6 +66,7 @@ class MediaEnhancementClient:
 
         self._configs: Configs = get_configs()
         self._http_session: aiohttp.ClientSession
+        self._background_tasks: list[asyncio.Task] = []
 
     @staticmethod
     def task_done_callback(task: asyncio.Task) -> None:
@@ -134,7 +135,7 @@ class MediaEnhancementClient:
 
         return output_file_path
 
-    async def _process_callbacks(self: Self) -> None:
+    async def _start_process_callbacks(self: Self) -> None:
         app = FastAPI()
         config = UvicornConfig(
             app,
@@ -159,22 +160,22 @@ class MediaEnhancementClient:
 
             await self.enhanced_media_queue.put(data.generated_name)
 
-        await server.serve()
+        task = asyncio.create_task(server.serve())
+        self._background_tasks.append(task)
+        task.add_done_callback(self.task_done_callback)
 
-    async def _process_incoming(self: Self) -> None:
+    async def _start_process_incoming(self: Self) -> None:
         async def _process() -> None:
             while True:
                 file_path = await self.incoming_media_queue.get()
                 await self.upload(file_path)
 
-        tasks: list[asyncio.Task] = []
         for _ in range(self.upload_tasks_n):
             task = asyncio.create_task(_process())
-            tasks.append(task)
+            self._background_tasks.append(task)
             task.add_done_callback(self.task_done_callback)
-        await asyncio.gather(*tasks)
 
-    async def _process_enhanced(self: Self) -> None:
+    async def _start_process_enhanced(self: Self) -> None:
         async def _process() -> None:
             generated_name = await self.enhanced_media_queue.get()
             file_path = await self.download(
@@ -184,36 +185,19 @@ class MediaEnhancementClient:
             if file_path is not None:
                 await self.result_media_queue.put(file_path)
 
-        tasks: list[asyncio.Task] = []
         for _ in range(self.download_tasks_n):
             task = asyncio.create_task(_process())
-            tasks.append(task)
+            self._background_tasks.append(task)
             task.add_done_callback(self.task_done_callback)
-        await asyncio.gather(*tasks)
 
     @asynccontextmanager
     async def run(self: Self) -> AsyncGenerator[asyncio.Queue[Path]]:
-        tasks: list[asyncio.Task] = []
-
         async with self._open_http_session():
-            try:
-                tasks = (
-                    asyncio.create_task(self._process_incoming()),
-                    asyncio.create_task(self._process_enhanced()),
-                    asyncio.create_task(self._process_callbacks()),
-                )
-                for task in tasks:
-                    task.add_done_callback(self.task_done_callback)
-                yield self.result_media_queue
-            except asyncio.CancelledError:
-                pass
-            finally:
-                for task in tasks:
-                    task.cancel()
-                await asyncio.wait_for(
-                    asyncio.gather(*tasks, return_exceptions=True),
-                    self.shutdown_timeout,
-                )
+            await self._start_process_incoming()
+            await self._start_process_enhanced()
+            await self._start_process_callbacks()
+
+            yield self.result_media_queue
 
 
 async def main() -> None:
@@ -235,15 +219,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    main_task = loop.create_task(main())
-
-    try:
-        loop.run_until_complete(main_task)
-    except KeyboardInterrupt:
-        main_task.cancel()
-        loop.run_until_complete(main_task)
-    finally:
-        loop.run_until_complete(loop.shutdown_asyncgens())
-        loop.close()
+    asyncio.run(main())
