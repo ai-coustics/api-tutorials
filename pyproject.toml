@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "api-tutorials"
 version = "0.1.0"
@@ -8,11 +12,37 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-aiohttp = {extras = ["speedups"], version = "^3.10.2"}
 aiofiles = "^24.1.0"
+aiohttp = {extras = ["speedups"], version = "^3.10.2"}
+fastapi = {extras = ["standard"], version = "^0.112.0"}
 pydantic-settings = "^2.4.0"
+ruff = "^0.5.7"
 
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.ruff]
+src = ["app", "scrapers"]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "A", "ANN", "ARG", "B", "BLE", "C4", "C90", "COM", "D", "E", "F", "FBT", "FIX",
+    "FLY", "G", "I", "ICN", "INP", "ISC", "N", "PIE", "PL", "PT", "PTH", "PYI", "Q",
+    "RET",  "RSE", "RUF", "S", "SIM", "SLF", "T20", "TD", "TID", "TRY", "UP", "W",
+    "YTT"
+]
+ignore = [
+    "COM812", "D100", "D101", "D102", "D103", "D104", "D107", "D202", "D203", "D213", "D400",
+    "D401", "D413", "D415", "ISC001", "PERF", "PLR0913", "RUF010", "TRY002", "TRY003"
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["D104", "F401"]
+
+[tool.ruff.lint.isort]
+known-local-folder = ["src"]
+
+[tool.ruff.lint.pep8-naming]
+ignore-names = ["e", "k", "v"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
