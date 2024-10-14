@@ -37,6 +37,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["D104", "F401"]
+"src/examples/**" = ["SIM117", "PLR2004", "T201"]
+"src/mocks.py" = ["T201"]
 
 [tool.ruff.lint.isort]
 known-local-folder = ["src"]

@@ -36,7 +36,7 @@ async def upload_and_enhance(
                 if response.status != 201:
                     response_text = await response.text()
                     print(f"Error occured: {response_text}")
-                    return
+                    return None
 
                 response_json = await response.json()
                 generated_name = response_json["generated_name"]
