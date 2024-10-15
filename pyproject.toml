@@ -16,8 +16,9 @@ aiofiles = "^24.1.0"
 aiohttp = {extras = ["speedups"], version = "^3.10.2"}
 fastapi = {extras = ["standard"], version = "^0.112.0"}
 pydantic-settings = "^2.4.0"
-ruff = "^0.5.7"
 
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.5.7"
 
 [tool.ruff]
 src = ["app", "scrapers"]

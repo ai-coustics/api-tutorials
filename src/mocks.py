@@ -8,8 +8,27 @@ from pathlib import Path
 async def mock_get_media_queue(
     source_folder: Path = Path("samples"),
     n_tasks: int | None = None,
-    period: float = 5.0,
+    period: float = 60.0,
 ) -> AsyncGenerator[asyncio.Queue[Path]]:
+    """Async context manager with the mock queue simulating a stream of media files.
+
+    By changing the `n_tasks` and `period` arguments' values you can control the rate
+    at what new mock media files are put into the queue. The default rate is `2` media
+    files every `60.0` seconds (`2` media files since by default the `n_tasks` equals
+    the number of files in the `source_folder`).
+
+    Args:
+        source_folder (Path): Source folder with media files. Defaults to
+            `Path("samples")`.
+        n_tasks (int | None): Optional number of `produce` tasks to be created. Defaults
+            to `None`.
+        period (float): Period in seconds of producing a new mock media file for each
+            `produce` task. Defaults to `60.0`.
+
+    Yields:
+        asyncio.Queue[Path]]: Dynamically populated mock queue with media files' paths.
+    """
+
     queue = asyncio.Queue()
 
     async def produce(file_path: Path) -> None:
@@ -40,6 +59,8 @@ async def mock_get_media_queue(
 
 
 async def mock_process_enhanced_media(queue: asyncio.Queue[Path]) -> None:
+    """Mock functiong printing the results of enhanced media files."""
+
     while True:
         enhanced_file_path = await queue.get()
         print(f"Enhanced media file path: {enhanced_file_path}")
