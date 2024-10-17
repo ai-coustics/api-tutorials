@@ -1,0 +1,4 @@
+aiofiles==24.1.0 
+aiohttp[speedups]==3.10.2 
+fastapi[standard]==0.112.0
+pydantic-settings==2.4.0 

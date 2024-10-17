@@ -44,15 +44,8 @@ async def upload_and_enhance(
                 return generated_name
 
 
-def main() -> None:
+def main(file_path: Path, arguments: dict[str, Any]) -> None:
     url = f"{API_URL}/media/enhance"
-    file_path = Path("samples/sample.mp3")
-    arguments = {
-        "loudness_target_level": -14,
-        "loudness_peak_limit": -1,
-        "enhancement_level": 1.0,
-        "transcode_kind": "MP3",
-    }
 
     asyncio.run(
         upload_and_enhance(
@@ -64,4 +57,11 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    file_path = Path("samples/sample.mp3")
+    arguments = {
+        "loudness_target_level": -14,
+        "loudness_peak_limit": -1,
+        "enhancement_level": 1.0,
+        "transcode_kind": "MP3",
+    }
+    main(file_path, arguments)

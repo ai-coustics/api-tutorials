@@ -149,8 +149,8 @@ class MediaEnhancementClient:
             x_signature: str = Header(...),
         ) -> None:
             if (
-                self._configs.callback_signature is not None
-                and x_signature != self._configs.callback_signature
+                self._configs.webhook_signature is not None
+                and x_signature != self._configs.webhook_signature
             ):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -199,23 +199,43 @@ class MediaEnhancementClient:
             yield self.result_media_queue
 
 
-async def main() -> None:
-    transcode_kind, result_media_file_extension = "WAV", "wav"
+async def main(
+    transcode_kind: str,
+    result_media_file_extension: str,
+    webhook_server_host: str,
+    webhook_server_port: int,
+    mock_get_media_queue_period: float,
+) -> None:
     enhancement_params = EnhancementParamsTO(transcode_kind=transcode_kind)
     output_folder = Path("results")
 
-    async with mock_get_media_queue() as incoming_media_queue:
+    async with mock_get_media_queue(
+        period=mock_get_media_queue_period
+    ) as incoming_media_queue:
         client = MediaEnhancementClient(
-            incoming_media_queue=incoming_media_queue,
-            enhancement_params=enhancement_params,
-            result_media_file_extension=result_media_file_extension,
-            output_folder=output_folder,
-            webhook_server_host="localhost",
-            webhook_server_port=8002,
+            incoming_media_queue,
+            enhancement_params,
+            result_media_file_extension,
+            output_folder,
+            webhook_server_host,
+            webhook_server_port,
         )
         async with client.run() as enhanced_media_queue:
             await mock_process_enhanced_media(enhanced_media_queue)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    transcode_kind, result_media_file_extension = "WAV", "wav"
+    webhook_server_host = "localhost"
+    webhook_server_port = 8002
+    mock_get_media_queue_period = 60.0
+
+    asyncio.run(
+        main(
+            transcode_kind,
+            result_media_file_extension,
+            webhook_server_host,
+            webhook_server_port,
+            mock_get_media_queue_period,
+        )
+    )
