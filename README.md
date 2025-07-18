@@ -52,7 +52,7 @@ Don't forget to change the `generated_name`, using the value returned from the u
 ```sh
 python -m src.examples.advanced
 ```
-1. Expose the `localhost:8002` adress to the internent. There are multimple options of how you can do this, but for testing you can consider such free services like [ngrok](https://ngrok.com/docs/getting-started/). Optionally, at the [entry point](./src/examples/advanced.py#L227) you can change the default values of the `webhook_server_host` and `webhook_server_port` variables, which are `"localhost"` and `8002` respectively.
+1. Expose the `localhost:8002` adress to the internent. There are multiple options of how you can do this, but for testing you can consider such free services like [ngrok](https://ngrok.com/docs/getting-started/). Optionally, at the [entry point](./src/examples/advanced.py#L227) you can change the default values of the `webhook_server_host` and `webhook_server_port` variables, which are `"localhost"` and `8002` respectively.
 2. Create a webhook on the [developer portal](https://developers.ai-coustics.io/webhooks). The `URL` should be routing to the `<exposed_address>/callbacks`, as the advacned script is listening for the `http://localhost:8002/callbacks` endpoint. If you configured the `WEBHOOK_SIGNATURE` environment variable, use it as the `Signature` value. 
 
 To better understand where media files are comming from, review the [mocks.py](./src/mocks.py) file and change the [mock_get_media_queue_period](./src/examples/advanced.py#L231) variable's value.

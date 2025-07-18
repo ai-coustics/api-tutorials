@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Configs(BaseSettings):
@@ -15,6 +15,11 @@ class Configs(BaseSettings):
 
     api_key: str
     webhook_signature: str | None = None
+
+    model_config = SettingsConfigDict(
+        env_file="../.env",
+        env_file_encoding="utf-8",
+    )
 
 
 def get_configs() -> Configs:
