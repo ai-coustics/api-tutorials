@@ -13,9 +13,9 @@ from uvicorn import Config as UvicornConfig
 from uvicorn import Server
 
 from src.configs import Configs, get_configs
+from src.constants import API_URL
 from src.mocks import mock_get_media_queue, mock_process_enhanced_media
 
-API_URL = "https://api.ai-coustics.io/v1"
 CHUNK_SIZE = 2048
 
 
