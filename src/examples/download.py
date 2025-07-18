@@ -9,7 +9,7 @@ from src.configs import get_configs
 
 configs = get_configs()
 
-API_URL = "https://api.ai-coustics.com/v1"
+API_URL = "https://api.ai-coustics.io/v1"
 CHUNK_SIZE = 1024
 
 
