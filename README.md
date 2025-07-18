@@ -10,7 +10,7 @@ ai|coustics provides AI-driven speech enhancement to enriching media experiences
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.12.4
 - An ai|coustics API key. You can get one by signing up on our [developer portal](https://developers.ai-coustics.com/signup).
 
 ### Installation & Usage
