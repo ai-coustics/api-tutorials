@@ -23,7 +23,7 @@ cd api-tutorials
 ```
 
 2. Create a virtual environment, activate it, and install the dependencies:
-    - Recommended: using the `poetry` ([documentation](https://python-poetry.org/docs/))
+    - Recommended: using the `uv` ([documentation](https://docs.astral.sh/uv/))
     - Or by using the python `venv` module and the `requirements.txt` file
 
 3. Create the `.env` file that would include `API_KEY` and optionally the `WEBHOOK_SIGNATURE` values. Check the description of the environment values at the [configs.py](./src/configs.py)
