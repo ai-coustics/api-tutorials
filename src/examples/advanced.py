@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from enum import StrEnum
 from pathlib import Path
 from typing import Self
 
@@ -13,10 +14,15 @@ from uvicorn import Config as UvicornConfig
 from uvicorn import Server
 
 from src.configs import Configs, get_configs
+from src.constants import API_URL
 from src.mocks import mock_get_media_queue, mock_process_enhanced_media
 
-API_URL = "https://api.ai-coustics.com/v1"
 CHUNK_SIZE = 2048
+
+
+class ModelArch(StrEnum):
+    FINCH = "FINCH"
+    LARK = "LARK"
 
 
 class EnhancementParamsTO(BaseModel):
@@ -24,6 +30,7 @@ class EnhancementParamsTO(BaseModel):
     loudness_peak_limit: int = -1
     enhancement_level: float = 1.0
     transcode_kind: str
+    model_arch: ModelArch
 
 
 class EnhancedMediaCallbackTO(BaseModel):
@@ -202,11 +209,15 @@ class MediaEnhancementClient:
 async def main(
     transcode_kind: str,
     result_media_file_extension: str,
+    model_arch: ModelArch,
     webhook_server_host: str,
     webhook_server_port: int,
     mock_get_media_queue_period: float,
 ) -> None:
-    enhancement_params = EnhancementParamsTO(transcode_kind=transcode_kind)
+    enhancement_params = EnhancementParamsTO(
+        transcode_kind=transcode_kind,
+        model_arch=model_arch,
+    )
     output_folder = Path("results")
 
     async with mock_get_media_queue(
@@ -226,6 +237,7 @@ async def main(
 
 if __name__ == "__main__":
     transcode_kind, result_media_file_extension = "WAV", "wav"
+    model_arch = ModelArch.LARK
     webhook_server_host = "localhost"
     webhook_server_port = 8002
     mock_get_media_queue_period = 60.0
@@ -234,6 +246,7 @@ if __name__ == "__main__":
         main(
             transcode_kind,
             result_media_file_extension,
+            model_arch,
             webhook_server_host,
             webhook_server_port,
             mock_get_media_queue_period,

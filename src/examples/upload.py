@@ -6,10 +6,9 @@ import aiofiles
 import aiohttp
 
 from src.configs import get_configs
+from src.constants import API_URL
 
 configs = get_configs()
-
-API_URL = "https://api.ai-coustics.com/v1"
 
 
 async def upload_and_enhance(
@@ -63,5 +62,6 @@ if __name__ == "__main__":
         "loudness_peak_limit": -1,
         "enhancement_level": 1.0,
         "transcode_kind": "MP3",
+        "model_arch": "FINCH",
     }
     main(file_path, arguments)

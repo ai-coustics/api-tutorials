@@ -6,10 +6,10 @@ import aiohttp
 from aiofiles import os as aiofiles_os
 
 from src.configs import get_configs
+from src.constants import API_URL
 
 configs = get_configs()
 
-API_URL = "https://api.ai-coustics.com/v1"
 CHUNK_SIZE = 1024
 
 
