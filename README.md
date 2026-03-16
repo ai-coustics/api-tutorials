@@ -1,5 +1,8 @@
 # ai|coustics API Examples
 
+> [!WARNING]
+> This API has been sunset. Please migrate to the SDK: https://docs.ai-coustics.com/
+
 Welcome to the ai|coustics API Python Examples repository! This repository contains example scripts and tutorials on how to use the ai|coustics API with Python.
 
 ## Overview
